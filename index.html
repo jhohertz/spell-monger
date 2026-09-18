@@ -106,11 +106,13 @@
   .key:hover{ background:rgba(58,47,92,.95); }
 
   /* def panel */
-  #defbox{ position:absolute; left:50%; top:16%; transform:translateX(-50%);
+  #defbox{ position:absolute; left:50%; top:16%; transform:translateX(-50%) translateY(-6px);
            background:var(--panel); border:1px solid var(--panel-line); border-radius:14px;
            padding:16px 20px; max-width:min(92vw,480px); z-index:4; display:none;
-           box-shadow:0 8px 40px rgba(0,0,0,.6); }
+           box-shadow:0 8px 40px rgba(0,0,0,.6); opacity:0;
+           transition:opacity .4s ease, transform .4s ease; cursor:pointer; }
   #defbox.on{ display:block; }
+  #defbox.on.shown{ opacity:1; transform:translateX(-50%) translateY(0); }
   #defbox .dpos{ color:var(--violet); font-style:italic; margin-bottom:6px; font-size:14px; }
   #defbox .dtext{ font-size:17px; line-height:1.45; }
   #defbox .ddots{ margin-top:10px; text-align:center; color:var(--gold); letter-spacing:4px; font-size:13px; }
@@ -482,6 +484,7 @@
     .hudbox{ padding:6px 10px; gap:10px; font-size:13px; border-radius:10px; }
     #cab-label{ top:calc(64px + env(safe-area-inset-top, 0px)); }
     #emo-badge{ top:calc(104px + env(safe-area-inset-top, 0px)); font-size:52px; }
+    #defbox{ top:22%; padding:13px 16px; }   /* below the badge, more compact */
     .foot{ font-size:11px; }
   }
   /* touch-class screens (phones AND tablets): 44px swatch targets */
@@ -1848,7 +1851,7 @@ const Game = {
     this.combo = 0; this.comboPeak = 0; this.revealed = {}; this.usedReveal = false;
     this.vowelsUsed = false; this.soundUsed = false;
     this.defIdx = 0; this.defEarned = 0; this.busy = true;
-    $('#defbox').classList.remove('on');
+    $('#defbox').classList.remove('on', 'shown');
     Scene.layoutSlots(wrd.length);
     this.updateHud(); this.updateRunes();
     // emoji hint (build-time matched, ships as a tiny map)
@@ -1861,7 +1864,7 @@ const Game = {
       $('#def-pos').textContent = Dict.posName(m[0]);
       $('#def-text').textContent = scrub(m[1], wrd, rec);
       $('#def-dots').textContent = '●' + '○'.repeat(Math.max(0, rec.m.length - 1));
-      $('#defbox').classList.add('on');
+      defShow();
       this.defIdx = 1;
       // the first definition IS spoken in reverse mode too — the word is
       // heard through its meaning, so the meaning must be heard
@@ -2158,12 +2161,38 @@ const Game = {
     this.after(2600, () => (this.bee && !flawless) ? this.beeFizzle() : this.advance());
   },
 
+  // fade the definition box in (double rAF so the transition runs)
+  defShow(){
+    const b = $('#defbox');
+    b.classList.add('on');
+    requestAnimationFrame(() => requestAnimationFrame(() => b.classList.add('shown')));
+  },
+  // auto-hide: the box used to sit over the playfield for the whole word.
+  // It now fades out after a couple of seconds — but never before the
+  // spoken definition finishes (long meanings get their full read-aloud),
+  // and a tap on the box buys 6 more seconds ("I'm still reading!").
+  // From-the-Scroll never auto-hides: there the definition IS the game.
+  scheduleDefHide(p){
+    this.defHideToken = (this.defHideToken || 0) + 1;
+    const tok = this.defHideToken;
+    const minT = new Promise(r => setTimeout(r, 4000));
+    const speech = p ? Promise.race([p.catch(() => {}), new Promise(r => setTimeout(r, 12000))]) : Promise.resolve();
+    Promise.all([minT, speech]).then(() => {
+      const extra = Math.max(0, (this.defHoldUntil || 0) - Date.now());
+      setTimeout(() => {
+        if (tok !== this.defHideToken) return;   // a newer slide took over
+        const b = $('#defbox');
+        b.classList.remove('shown');
+        setTimeout(() => { if (tok === this.defHideToken) b.classList.remove('on'); }, 450);
+      }, 900 + extra);
+    });
+  },
   defNext(){
     if (!this.typing) return;
     const rec = this.rec();
     if (this.defIdx === 0 && this.mistakes === 0) { SAVE.scholarCount++; saveSave(); }
     const items = rec.m.length + ((rec.s && rec.s.length) || (rec.a && rec.a.length) ? 1 : 0);
-    if (this.defIdx >= items) { $('#defbox').classList.remove('on'); return; }
+    if (this.defIdx >= items) { $('#defbox').classList.remove('on', 'shown'); return; }
     const posEl = $('#def-pos'), textEl = $('#def-text'), dotsEl = $('#def-dots');
     let line;
     if (this.defIdx < rec.m.length) {
@@ -2183,7 +2212,7 @@ const Game = {
     let dots = '';
     for (let i = 0; i < items; i++) dots += i === this.defIdx ? '●' : '○';
     dotsEl.textContent = dots;
-    $('#defbox').classList.add('on');
+    this.defShow();
     // definitions EARN — but only when actually listened to. EasySpeech
     // cancels the current utterance on every new speak, so any later speak
     // (next slide, re-hear, next word) bumps Voice.says and voids this
@@ -2200,11 +2229,13 @@ const Game = {
     if (!this.reverse) {
       if (p) p.then(grant, grant);
       else setTimeout(grant, 1200); // voiceless browser: short grace, still capped at 2/word
+      this.scheduleDefHide(p);   // after p — a const in TDZ above would throw
     }
     this.defIdx++;
   },
 
   roundEnd(){
+    $('#defbox').classList.remove('shown');
     $('#hud').classList.remove('on');
     showScreen('summary');
     Scene.clearLetters();
@@ -2310,7 +2341,7 @@ function showScreen(name){
   if (name !== 'play') {
     $('#hintbar').classList.remove('on');
     $('#kbd').classList.remove('on');
-    $('#defbox').classList.remove('on');
+    $('#defbox').classList.remove('on', 'shown');
     $('#emo-badge').classList.remove('on');
   } else {
     $('#hintbar').classList.add('on');
@@ -2685,6 +2716,11 @@ async function boot(){
     Game.speakWord(Game.word().charAt(0).toUpperCase() + Game.word().slice(1));
   });
   $('#btn-def').addEventListener('click', () => Game.defNext());
+  // tapping the definition box = "I'm still reading" — buys 6 more seconds
+  // before it fades (advance slides via the Definition button)
+  $('#defbox').addEventListener('click', () => {
+    if (Game.typing && !Game.reverse) Game.defHoldUntil = Date.now() + 6000;
+  });
   $('#btn-vow').addEventListener('click', () => Game.useVowels());
   $('#btn-snd').addEventListener('click', () => Game.soundOut());
   $('#btn-rev').addEventListener('click', () => Game.useReveal());
