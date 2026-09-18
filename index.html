@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Spell-Monger</title>
 <style>
   :root{
@@ -16,7 +16,13 @@
     font-family:Georgia,'Times New Roman',serif; color:#f0e8d8; background:var(--ink);
     -webkit-user-select:none; user-select:none;
   }
-  #bg{ position:fixed; inset:0; z-index:0; display:block; }
+  html{ -webkit-tap-highlight-color:transparent; }
+  .key,.btn,.hbtn,.pchip,.swatch,select,input{ touch-action:manipulation; }
+  /* width/height must be explicit: #bg IS the WebGL canvas, and a replaced
+     element with intrinsic size (canvas w/h attrs = drawing buffer) does NOT
+     stretch under inset:0 — at dpr 2 the box overflows 2x and the stage
+     renders in the off-screen bottom-right quarter (CSS 2.1 §10.3.8) */
+  #bg{ position:fixed; inset:0; width:100%; height:100%; z-index:0; display:block; }
 
   #ui{ position:fixed; inset:0; z-index:1; display:flex; flex-direction:column; }
 
@@ -30,7 +36,7 @@
     background:var(--panel); border:1px solid var(--panel-line); border-radius:16px;
     padding:22px 28px; backdrop-filter:blur(8px); box-shadow:0 8px 40px rgba(0,0,0,.5);
     max-width:min(92vw,560px); width:100%;
-    max-height:calc(100vh - 28px); overflow-y:auto; box-sizing:border-box;
+    max-height:min(92vh, 720px); max-height:min(92dvh, 720px); overflow-y:auto; box-sizing:border-box;
   }
   h1{ font-size:clamp(34px,6vw,58px); letter-spacing:3px; color:var(--gold);
       text-shadow:0 0 24px rgba(232,196,100,.45); text-align:center; }
@@ -52,6 +58,7 @@
   /* HUD */
   #hud{ position:absolute; top:0; left:0; right:0; display:none; justify-content:space-between;
         align-items:center; padding:12px 18px; z-index:3; pointer-events:none; }
+  #hud .hudbox{ pointer-events:auto; }   /* the 🎹/🐾 buttons must be tappable */
   #hud.on{ display:flex; }
   .hudbox{ background:var(--panel); border:1px solid var(--panel-line); border-radius:12px;
            padding:8px 14px; display:flex; gap:16px; align-items:center; font-size:16px; }
@@ -68,13 +75,16 @@
   #msg.on{ opacity:1; }
 
   /* hint bar */
-  #hintbar{ position:absolute; left:0; right:0; bottom:198px; display:none;
-            justify-content:center; gap:10px; z-index:3; flex-wrap:wrap; padding:0 10px; }
+  /* play screen is a flex column: overlays absolute, hintbar + kbd stacked
+     in-flow at the bottom (portrait) — no hardcoded offsets */
+  #scr-play{ justify-content:flex-end; gap:0; padding:0 8px 0; }
+  #hintbar{ position:static; width:100%; display:none;
+            justify-content:center; gap:10px; z-index:3; flex-wrap:wrap; padding:0 10px 6px; }
   #hintbar.on{ display:flex; }
   .hbtn{
     font-family:inherit; font-size:13px; color:#f0e8d8; cursor:pointer;
     background:var(--panel); border:1px solid var(--panel-line); border-radius:10px;
-    padding:8px 12px; transition:transform .08s;
+    padding:8px 12px; transition:transform .08s; pointer-events:auto;
   }
   .hbtn .cost{ color:var(--gold); }
   .hbtn:hover{ transform:translateY(-2px); }
@@ -82,15 +92,16 @@
   .hbtn .cnt{ color:var(--cyan); font-weight:bold; }
 
   /* keyboard */
-  #kbd{ position:absolute; left:0; right:0; bottom:0; display:none; flex-direction:column;
-        gap:5px; padding:10px 0 14px; z-index:3; background:linear-gradient(180deg,transparent,rgba(8,6,14,.85) 30%); }
+  #kbd{ position:static; width:100%; display:none; flex-direction:column;
+        gap:5px; padding:10px 0 max(14px, env(safe-area-inset-bottom, 0px)); z-index:3;
+        background:linear-gradient(180deg,transparent,rgba(8,6,14,.85) 30%); }
   #kbd.on{ display:flex; }
   #kbd.on.hidden{ display:none; }   /* responsive: auto-hidden on desktop */
-  .krow{ display:flex; gap:5px; justify-content:center; }
+  .krow{ display:flex; gap:2px; justify-content:center; }
   .key{
     font-family:inherit; font-size:16px; color:#e8dcc0; cursor:pointer;
     background:rgba(30,24,52,.9); border:1px solid rgba(232,196,100,.22); border-radius:8px;
-    width:clamp(30px,5.4vw,52px); height:clamp(34px,4.6vw,48px);
+    flex:1 1 0; min-width:0; max-width:52px; height:clamp(44px,5.4vw,48px);  /* fills the row: ~37px on a 390px phone */
   }
   .key:hover{ background:rgba(58,47,92,.95); }
 
@@ -163,6 +174,32 @@
     background:#241a38; border:1px solid var(--panel-line); border-radius:8px; padding:6px 10px; }
   .fseg button.on{ border-color:var(--gold); box-shadow:0 0 8px rgba(232,196,100,.4); }
   .fsub{ font-size:12px; color:#8a7f64; margin-top:6px; }
+
+  /* ================= mobile (narrow screens, e.g. phone portrait) ================= */
+  @media (max-width: 520px) {
+    .btn{ min-width:0; font-size:15px; padding:11px 14px; }   /* min-width:180 was stacking every menu row */
+    .btn.big{ font-size:17px; padding:13px 16px; }
+    .grid{ grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:8px; }  /* 2-3 cols, not one giant */
+    .card{ padding:10px; }
+    .card .ic{ font-size:26px; }
+    .list{ max-height:60vh; max-height:60dvh; }
+    #hud{ padding:calc(8px + env(safe-area-inset-top, 0px)) 10px; }
+    .hudbox{ padding:6px 10px; gap:10px; font-size:13px; border-radius:10px; }
+    #cab-label{ top:calc(64px + env(safe-area-inset-top, 0px)); }
+    #emo-badge{ top:calc(104px + env(safe-area-inset-top, 0px)); font-size:52px; }
+    .swatch{ width:34px; height:34px; }
+    .foot{ font-size:11px; }
+  }
+  /* phone landscape: hint row docks under the HUD, keyboard at the bottom,
+     stage gets the whole middle band */
+  @media (orientation: landscape) and (max-height: 520px) {
+    #scr-play{ justify-content:flex-start; padding-top:calc(76px + env(safe-area-inset-top, 0px)); }
+    #kbd{ margin-top:auto; }
+    .hbtn{ font-size:13px; padding:7px 10px; }
+    #hintbar{ gap:6px; padding-bottom:4px; }
+    #msg{ top:42%; }
+    #defbox{ top:44%; transform:translate(-50%, -50%); }
+  }
 </style>
 </head>
 <body>
@@ -995,6 +1032,7 @@ const Scene = {
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
     this.camera.position.set(0, 3.4, 9.5);
     this.camera.lookAt(0, 1.6, 0);
+    this.spacingMul = 1; this.lookY = 1.6;
     this.scene.add(new THREE.AmbientLight(0xbfaaff, 0.55));
     const dl = new THREE.DirectionalLight(0xfff2cc, 0.8); dl.position.set(4, 8, 6); this.scene.add(dl);
     const pl = new THREE.PointLight(0xe8c464, 0.6, 30); pl.position.set(0, 4, 2); this.scene.add(pl);
@@ -1010,8 +1048,51 @@ const Scene = {
   resize(){
     const w = window.innerWidth, h = window.innerHeight;
     this.renderer.setSize(w, h, false);
-    this.camera.aspect = w / h;
+    this.frameStage();
+    // rotation mid-round: re-lay the pedestals for the new aspect and
+    // rebuild the typed letters from game state (never lose progress)
+    if (window.Game && Game.round && Game.relayoutStage &&
+        document.querySelector('#scr-play.on')) {
+      requestAnimationFrame(() => Game.relayoutStage());
+    }
+  },
+  /* Aspect-aware framing (§16). Wide screens (aspect >= 0.8) keep the
+     CLASSIC framing exactly — desktop is pixel-identical. Narrow/portrait
+     screens: tighter pedestal spacing (set before layoutSlots), camera
+     pulled back + FOV raised until the whole row fits horizontally, and
+     the stage lifted above the DOM band (HUD + hint bar + keyboard).
+     Fit rule: horizontal half-FOV >= half the pedestal row + margin. */
+  frameStage(){
+    const w = window.innerWidth, h = window.innerHeight, aspect = w / h;
+    const R = THREE.MathUtils.degToRad;
+    if (aspect >= 0.8) {
+      this.spacingMul = 1;
+      this.lookY = 1.6;
+      this.camera.fov = 50;
+      this.camera.position.set(0, 3.4, 9.5);
+      this.camera.lookAt(0, 1.6, 0);
+      if (this.scene.fog) { this.scene.fog.near = 12; this.scene.fog.far = 46; }  // classic depth cue
+    } else {
+      this.spacingMul = aspect < 0.7 ? 0.6 : 0.8;
+      const n = this.pedestals.length || 5;
+      const rowHalf = ((n - 1) / 2) * Math.min(2.1, 12 / Math.max(n, 1)) * this.spacingMul + 1.2;
+      const fov = 68;
+      let D = (rowHalf + 0.6) / (Math.tan(R(fov) / 2) * aspect);
+      D = Math.max(11, Math.min(22, D));
+      // the pulled-back camera would sit INSIDE the fog (near:12) and the
+      // stage vanishes into the background — keep the fog beyond the stage
+      if (this.scene.fog) { this.scene.fog.near = D + 4; this.scene.fog.far = D + 34; }
+      const hud = document.querySelector('#hud'), hb = document.querySelector('#hintbar'), kb = document.querySelector('#kbd');
+      const band = ((hud && hud.offsetHeight) || 0) + ((hb && hb.offsetHeight) || 0) + ((kb && kb.offsetHeight) || 0);
+      this.lookY = 1.6 - Math.min(1.5, (band / h) * 2.6);   // lift stage above the DOM band
+      this.camera.fov = fov;
+      const dir = new THREE.Vector3(0, 1.8, 9.5).normalize();  // classic camera axis
+      this.camera.position.set(dir.x * D, this.lookY + dir.y * D, dir.z * D);
+      this.camera.lookAt(0, this.lookY, 0);
+    }
+    this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
+    if (this.famGrp) this.famGrp.position.x = aspect >= 0.8 ? -5.4 : -2.7;  // keep the familiar on stage
   },
   makeParticles(){
     const max = 600;
@@ -1061,7 +1142,7 @@ const Scene = {
   letterMeshes: [],
   layoutSlots(n){
     this.clearLetters();
-    const spacing = Math.min(2.1, 12 / Math.max(n, 1));
+    const spacing = Math.min(2.1, 12 / Math.max(n, 1)) * (this.spacingMul || 1);
     for (let i = 0; i < n; i++) {
       const t = (i - (n - 1) / 2) / Math.max(1, (n - 1) / 2);
       const x = (i - (n - 1) / 2) * spacing;
@@ -1413,6 +1494,7 @@ const Scene = {
       });
     }
     g.position.set(-5.4, this.famBaseY, 1.8); // left-front: visible on menu AND play
+    if (window.innerWidth / window.innerHeight < 0.8) g.position.x = -2.7; // narrow: keep it on stage
     this.scene.add(g);
     this.famGrp = g;
   },
@@ -1472,7 +1554,7 @@ const Scene = {
     P.geo.attributes.position.needsUpdate = true;
     P.geo.attributes.color.needsUpdate = true;
     this.camera.position.x = Math.sin(this.t * 0.12) * 0.25;
-    this.camera.lookAt(0, 1.6, 0);
+    this.camera.lookAt(0, this.lookY, 0);  // respects frameStage's lift (1.6 on wide screens — unchanged)
     this.renderer.render(this.scene, this.camera);
   }
 };
@@ -1670,6 +1752,25 @@ const Game = {
   },
   startScroll(){ this.startRound({ reverse: true }); },
 
+  // rotation/resize mid-round: Scene.resize() re-framed the camera and
+  // spacing; rebuild the pedestal row + every already-placed letter from
+  // game state (typed prefix + revealed slots), then re-apply highlights.
+  relayoutStage(){
+    if (!this.round || this.busy) return;
+    const w = this.word();
+    Scene.layoutSlots(w.length);
+    for (let i = 0; i < w.length; i++) {
+      if (i < this.pos) Scene.addLetter(w[i], i, { dur: 0.2 });
+      else if (this.revealed[i]) Scene.addLetter(this.revealed[i], i, { reveal: true, dur: 0.2 });
+    }
+    if (this.vowelsUsed) {
+      const set = new Set();
+      for (let i = 0; i < w.length; i++) if ('aeiou'.includes(w[i])) set.add(i);
+      Scene.setVowels(set);
+    }
+    Scene.setCur(this.pos);
+  },
+
   nextWord(){
     // let any in-flight speech (praise, definitions, reveals) finish before
     // speaking the next word — EasySpeech cancels the current utterance on
@@ -1818,6 +1919,7 @@ const Game = {
       } else {
         Sfx.wobble();
         Scene.wobblePed(this.pos); // pedestal visibly shakes "not quite"
+        if (navigator.vibrate) navigator.vibrate(25);   // phones feel the bounce
         const p = Scene.pedestals[this.pos] || new THREE.Vector3(0, 1.6, 0);
         Scene.puff(p.x, 1.6, p.z, 0xe87f4a, 18, 2.6);
         this.mistakes++;
@@ -1976,6 +2078,7 @@ const Game = {
     Scene.familiarHop();
     if (flawless) {
       Sfx.cast(); Sfx.sparkle();
+      if (navigator.vibrate) navigator.vibrate(60);   // a satisfied little thump
       const p = Scene.pedestals[0] || new THREE.Vector3(0, 1.6, 0);
       Scene.puff(p.x, 1.8, p.z, 0xe8c464, 40, 4);
       this.showMsg('✨ Flawless! ✨<div style="font-size:.5em">+' + gain + ' ✦' + bonusText + '</div>', 2200);
@@ -2134,6 +2237,12 @@ let prevScreen = 'menu';
 function showScreen(name){
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
   $('#scr-' + name).classList.add('on');
+  // HUD lifecycle: visible exactly on the play-ish screens (was leaking onto
+  // Sigils/Trove etc. and overlapping their ← Back buttons)
+  $('#hud').classList.toggle('on', name === 'play' || name === 'summary');
+  // reframe the stage now the DOM band (HUD + hint bar + keyboard) exists —
+  // entering play changes the band without any window-resize event
+  if (name === 'play' || name === 'summary') requestAnimationFrame(() => Scene.frameStage());
   if (name !== 'play') {
     $('#hintbar').classList.remove('on');
     $('#kbd').classList.remove('on');
