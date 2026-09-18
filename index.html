@@ -157,9 +157,34 @@
   .tbtn{ margin-top:9px; font-size:13px; min-width:0; padding:7px 14px; }
 
   .list{ width:100%; max-height:44vh; overflow-y:auto; }
-  .lrow{ display:flex; justify-content:space-between; padding:8px 4px; font-size:15px;
+  .lrow{ display:flex; justify-content:space-between; padding:8px 4px; font-size:15px; cursor:pointer; border-radius:8px;
          border-bottom:1px solid rgba(232,196,100,.12); }
   .lrow .ok{ color:var(--good); } .lrow .sl{ color:var(--bad); }
+  .lrow:hover{ background:rgba(232,196,100,.06); }
+  /* Word Book: A–Z bestiary index + word entry page */
+  #book-index{ display:flex; flex-wrap:wrap; gap:4px; margin:8px 0 2px; }
+  .bidx{ min-width:0; flex:1 1 auto; padding:5px 0; border-radius:7px; font-size:13px;
+    background:rgba(90,74,140,.25); border:1px solid #4a4030; color:#cfc6e8; letter-spacing:.02em; }
+  .bidx small{ color:#8a7f64; font-size:10px; margin-left:3px; }
+  .bidx.all{ flex:0 0 auto; padding:5px 12px; font-style:italic; }
+  .bidx.sel{ background:rgba(232,196,100,.2); border-color:var(--gold); color:var(--gold); }
+  .bidx.sel small{ color:var(--gold); }
+  .bidx.off{ opacity:.3; pointer-events:none; }
+  #be-back{ min-width:0; padding:8px 14px; margin-bottom:12px; }
+  .be-head{ display:flex; align-items:center; justify-content:center; gap:12px; margin:16px 0 2px; }
+  .be-emo{ font-size:44px; filter:drop-shadow(0 0 10px rgba(232,196,100,.4)); }
+  .be-word{ font-size:30px; color:var(--gold); letter-spacing:.04em; }
+  .be-master{ font-size:24px; }
+  .be-meta{ text-align:center; color:#8a7f64; font-size:13px; margin-bottom:12px; }
+  .be-meta b{ color:#cfc6e8; }
+  .be-hear{ display:table; margin:2px auto 6px; min-width:0; padding:9px 20px; }
+  .be-sec{ color:var(--violet); font-style:italic; font-size:14px; margin:14px 0 6px; }
+  .be-def{ font-size:15.5px; line-height:1.5; margin-bottom:8px; }
+  .be-pos{ color:var(--violet); font-style:italic; }
+  .be-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .be-chip{ background:rgba(232,196,100,.12); border:1px solid rgba(232,196,100,.35); color:#e8d9a0;
+    border-radius:999px; padding:4px 12px; font-size:14px; }
+  .be-chip.opp{ background:rgba(168,120,232,.12); border-color:rgba(168,120,232,.4); color:#cbb4f0; }
 
   .back{ position:absolute; top:14px; left:14px; z-index:5; }
   .foot{ font-size:12px; color:#7a6f56; text-align:center; max-width:420px; line-height:1.4; }
@@ -408,9 +433,14 @@
     <div class="panel" style="max-width:min(94vw,680px)">
       <h2>The Word Book</h2>
       <div class="sub" id="book-stats"></div>
-      <input id="book-search" type="text" placeholder="Search your words…" style="width:100%;box-sizing:border-box;padding:8px 12px;margin:10px 0;border-radius:8px;border:1px solid #4a4030;background:#1d1810;color:#e8dcc0;font:15px Georgia,serif">
-      <div class="list" id="book-list"></div>
-      <div class="row" style="margin-top:10px"><button class="btn" id="book-more">Show more</button></div>
+      <div id="book-entry"></div>
+      <div id="book-listwrap">
+        <input id="book-search" type="text" placeholder="Search your words…" style="width:100%;box-sizing:border-box;padding:8px 12px;margin:10px  0;border-radius:8px;border:1px solid #4a4030;background:#1d1810;color:#e8dcc0;font:15px Georgia,serif">
+        <div id="book-index"></div>
+        <div class="fsub" id="book-fnote" style="display:none;margin-top:6px"></div>
+        <div class="list" id="book-list"></div>
+        <div class="row" style="margin-top:10px"><button class="btn" id="book-more">Show more</button></div>
+      </div>
     </div>
   </section>
 
@@ -2550,26 +2580,81 @@ function renderTrove(){
   });
 }
 function renderBook(){
+  bookBack();
   const keys = Object.keys(SAVE.counts).sort();
-  $('#book-stats').innerHTML = 'You have cast <b>' + keys.length + '</b> words · mastered <b>' + (SAVE.masteredCount || 0) + '</b>';
+  // bestiary index: per-letter counts so kids can drill A–Z as the book grows
+  const lc = {};
+  keys.forEach(w => { const c = w.charAt(0).toLowerCase(); lc[c] = (lc[c] || 0) + 1; });
+  $('#book-index').innerHTML = '<button class="bidx all' + (!_bookL ? ' sel' : '') + '" data-l="">All</button>' +
+    'abcdefghijklmnopqrstuvwxyz'.split('').map(c => {
+      const n = lc[c] || 0;
+      return '<button class="bidx' + (_bookL === c ? ' sel' : '') + (n ? '' : ' off') + '" data-l="' + c + '">' + c.toUpperCase() + (n ? '<small>' + n + '</small>' : '') + '</button>';
+    }).join('');
+  document.querySelectorAll('#book-index .bidx').forEach(b => { b.onclick = () => {
+    _bookL = (b.dataset.l && _bookL === b.dataset.l) ? '' : b.dataset.l;  // tap the letter again = All
+    renderBook();
+  }; });
+  $('#book-stats').innerHTML = 'You have cast <b>' + keys.length + '</b> words · mastered <b>' + (SAVE.masteredCount || 0) + '</b> · <i>tap a word to open its page</i>';
   bookRender(0);
 }
-let _bookQ = '';
+let _bookQ = '', _bookL = '';
 function bookRender(from){
-  const keys = Object.keys(SAVE.counts).sort().filter(w => !_bookQ || w.toLowerCase().includes(_bookQ));
+  const all = Object.keys(SAVE.counts);
+  const keys = all.sort().filter(w => (!_bookQ || w.toLowerCase().includes(_bookQ)) && (!_bookL || w.charAt(0).toLowerCase() === _bookL));
   const list = $('#book-list'); list.innerHTML = '';
   keys.slice(0, from + 100).forEach(w => {
-    const rec = Dict.get(w);
-    const emo = Dict.emo[w] ? ' ' + Dict.emo[w] : '';
+    const emo = Dict.emo[w.toUpperCase()] ? ' ' + Dict.emo[w.toUpperCase()] : '';
     const day = SAVE.seen[w] != null ? 'Day ' + (SAVE.seen[w] + 1) : '';
     const master = SAVE.mastered && SAVE.mastered[w] ? ' 🎓' : '';
     const row = el('div', 'lrow');
     row.innerHTML = '<span>' + w.charAt(0).toUpperCase() + w.slice(1) + emo + master + ' <span style="color:#8a7f64;font-size:12px">' + day + '</span></span>' +
       '<span><span class="ok">' + SAVE.counts[w] + '×</span></span>';
+    row.onclick = () => bookEntry(w);   // bestiary: open the word's page
     list.appendChild(row);
   });
+  const fn = $('#book-fnote');
+  if (_bookL || _bookQ) {
+    fn.textContent = 'showing ' + keys.length + ' of ' + all.length + (_bookL ? ' starting with ' + _bookL.toUpperCase() : '') + (_bookQ ? ' matching “' + _bookQ + '”' : '');
+    fn.style.display = '';
+  } else fn.style.display = 'none';
   $('#book-more').style.display = keys.length > from + 100 ? '' : 'none';
   $('#book-more').onclick = () => bookRender(from + 100);
+}
+// bestiary entry: the full record for a discovered word — meanings,
+// kindred words, opposites, hear-it — the way a monster manual shows a
+// creature once you've met it
+function bookEntry(w){
+  const rec = Dict.get(w.toUpperCase());
+  if (!rec) return;
+  const emo = Dict.emo[w.toUpperCase()] || '';
+  const day = SAVE.seen[w] != null ? 'Day ' + (SAVE.seen[w] + 1) : '';
+  const master = SAVE.mastered && SAVE.mastered[w];
+  const n = SAVE.counts[w] || 0;
+  // NB: not class="back" — that class is position:absolute (screen Back)
+  let html = '<button class="btn" id="be-back">← All words</button>' +
+    '<div class="be-head">' + (emo ? '<span class="be-emo">' + emo + '</span>' : '') +
+    '<span class="be-word">' + w.charAt(0).toUpperCase() + w.slice(1) + '</span>' +
+    (master ? '<span class="be-master" title="mastered">🎓</span>' : '') + '</div>' +
+    '<div class="be-meta">cast <b>' + n + '</b>×' + (day ? ' · first cast ' + day : '') + (master ? ' · <b>mastered</b>' : '') + '</div>' +
+    '<button class="btn be-hear" id="be-hear">🔊 Hear it</button>' +
+    '<div class="be-sec">Meanings</div>';
+  rec.m.forEach(m => { html += '<div class="be-def"><span class="be-pos">' + Dict.posName(m[0]) + '</span> — ' + scrub(m[1], w, rec) + '</div>'; });
+  if (rec.s && rec.s.length) html += '<div class="be-sec">Also called</div><div class="be-chips">' +
+    rec.s.slice(0, 6).map(s => '<span class="be-chip">' + scrub(s, w, rec) + '</span>').join('') + '</div>';
+  if (rec.a && rec.a.length) html += '<div class="be-sec">Opposites</div><div class="be-chips">' +
+    rec.a.slice(0, 6).map(s => '<span class="be-chip opp">' + scrub(s, w, rec) + '</span>').join('') + '</div>';
+  $('#book-entry').innerHTML = html;
+  $('#book-entry').style.display = 'block';
+  $('#book-listwrap').style.display = 'none';
+  $('#be-hear').onclick = () => Voice.say("It's '" + w + "'.", { rate: (SAVE.settings.rate || 1) * 0.85 });
+  $('#be-back').onclick = bookBack;
+  document.querySelector('#scr-book .panel').scrollTop = 0;
+}
+function bookBack(){
+  const e = $('#book-entry');
+  if (e) { e.style.display = 'none'; e.innerHTML = ''; }
+  const lw = $('#book-listwrap');
+  if (lw) lw.style.display = '';
 }
 function renderAch(filter){
   const list = achList();
