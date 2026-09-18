@@ -69,7 +69,7 @@
   .rune.lit{ background:var(--gold); box-shadow:0 0 10px rgba(232,196,100,.7); }
   .rune.slip{ background:rgba(232,143,106,.55); border-color:var(--bad); }
 
-  #msg{ position:absolute; left:0; right:0; top:30%; text-align:center; z-index:2;
+  #msg{ position:absolute; left:0; right:0; top:24%; text-align:center; z-index:2;  /* 24%: 30% touched the letter slabs on longer words (portrait) */
         font-size:clamp(30px,5vw,52px); color:var(--gold); text-shadow:0 0 26px rgba(232,196,100,.6);
         opacity:0; pointer-events:none; transition:opacity .3s; }
   #msg.on{ opacity:1; }
@@ -175,35 +175,32 @@
   .fseg button.on{ border-color:var(--gold); box-shadow:0 0 8px rgba(232,196,100,.4); }
   .fsub{ font-size:12px; color:#8a7f64; margin-top:6px; }
 
-  /* ================= mobile (narrow screens, e.g. phone portrait) ================= */
-  @media (max-width: 520px) {
-    .btn{ min-width:0; font-size:15px; padding:11px 14px; }   /* min-width:180 was stacking every menu row */
-    .btn.big{ font-size:17px; padding:13px 16px; }
-    .grid{ grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:8px; }  /* 2-3 cols, not one giant */
-    .card{ padding:10px; }
-    .card .ic{ font-size:26px; }
-    .list{ max-height:60vh; max-height:60dvh; }
-    #hud{ padding:calc(8px + env(safe-area-inset-top, 0px)) 10px; }
-    .hudbox{ padding:6px 10px; gap:10px; font-size:13px; border-radius:10px; }
-    #cab-label{ top:calc(64px + env(safe-area-inset-top, 0px)); }
-    #emo-badge{ top:calc(104px + env(safe-area-inset-top, 0px)); font-size:52px; }
-    .swatch{ width:34px; height:34px; }
-    .foot{ font-size:11px; }
-  }
-  /* phone landscape: hint row docks under the HUD, keyboard at the bottom,
-     stage gets the whole middle band */
-  @media (orientation: landscape) and (max-height: 520px) {
-    #scr-play{ justify-content:flex-start; padding-top:calc(76px + env(safe-area-inset-top, 0px)); }
-    #kbd{ margin-top:auto; }
-    .hbtn{ font-size:13px; padding:7px 10px; }
-    #hintbar{ gap:6px; padding-bottom:4px; }
-    #msg{ top:42%; }
-    #defbox{ top:44%; transform:translate(-50%, -50%); }
-  }
+  /* NB: the mobile @media blocks live in the SECOND <style> block — they
+     must come AFTER the base rules to win the cascade (same specificity,
+     later source order). They were here originally and silently lost to
+     the base #emo-badge/.swatch/.btn rules below. */
+  /* P2 focus mode: shown when the on-screen keyboard is hidden on a narrow
+     screen (landscape escape hatch / deliberate 🎹 off) */
+  #kbd-pill{ position:fixed; left:50%; transform:translateX(-50%);
+    bottom:calc(12px + env(safe-area-inset-bottom, 0px)); z-index:6;
+    display:none; padding:10px 18px; font-size:15px; border-radius:14px;
+    background:rgba(30,24,50,.92); border:1px solid #6a5f92; color:#cfc6e8;
+    letter-spacing:.03em; box-shadow:0 4px 14px rgba(0,0,0,.4); }
+  #kbd-pill.on{ display:block; }
 </style>
 </head>
 <body>
 <canvas id="bg"></canvas>
+
+<!-- phone-landscape portrait lock (CSS-only: shows only on phone-sized
+     landscape screens, auto-hides on rotate — tablets/desktops unaffected) -->
+<div id="rotate-hint">
+  <div class="rh-box">
+    <div class="rh-ic">📱</div>
+    <div class="rh-title">Turn it this way</div>
+    <div class="rh-sub">Spell-Monger plays best in portrait —<br>rotate your phone to keep the keys in reach.</div>
+  </div>
+</div>
 
 <div id="ui">
   <!-- HUD -->
@@ -319,6 +316,7 @@
       <button class="hbtn" id="btn-skip">⏭ Skip (<span class="cnt" id="skip-n">0</span>)</button>
       <button class="hbtn warn" id="btn-slip">🏳 Let it slip</button>
     </div>
+    <button id="kbd-pill" title="Bring back the on-screen keyboard">🎹 Keys</button>
     <div id="kbd">
       <div class="krow" id="kr1"></div>
       <div class="krow" id="kr2"></div>
@@ -457,7 +455,7 @@
 }
 #cab-label.on { display: block; }
 #emo-badge {
-  position: absolute; top: 7vh; left: 50%; transform: translateX(-50%);
+  position: absolute; top: calc(88px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
   font-size: 60px; display: none; z-index: 4;
   filter: drop-shadow(0 0 14px rgba(232, 196, 100, .45));
   animation: emobob 3s ease-in-out infinite;
@@ -471,6 +469,42 @@
   border: 2px solid #4a4030; box-sizing: border-box;
 }
 .swatch.sel { border-color: #e8c464; box-shadow: 0 0 8px rgba(232,196,100,.6); }
+
+  /* ================= mobile (narrow screens, e.g. phone portrait) ================= */
+  @media (max-width: 520px) {
+    .btn{ min-width:0; font-size:15px; padding:11px 14px; }   /* min-width:180 was stacking every menu row */
+    .btn.big{ font-size:17px; padding:13px 16px; }
+    .grid{ grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:8px; }  /* 2-3 cols, not one giant */
+    .card{ padding:10px; }
+    .card .ic{ font-size:26px; }
+    .list{ max-height:60vh; max-height:60dvh; }
+    #hud{ padding:calc(8px + env(safe-area-inset-top, 0px)) 10px; }
+    .hudbox{ padding:6px 10px; gap:10px; font-size:13px; border-radius:10px; }
+    #cab-label{ top:calc(64px + env(safe-area-inset-top, 0px)); }
+    #emo-badge{ top:calc(104px + env(safe-area-inset-top, 0px)); font-size:52px; }
+    .foot{ font-size:11px; }
+  }
+  /* touch-class screens (phones AND tablets): 44px swatch targets */
+  @media (max-width: 1100px) {
+    .swatch{ width:44px; height:44px; }
+  }
+  /* phone landscape is portrait-locked: a rotate-hint overlay covers the
+     screen on phone-sized landscape viewports (player verdict: 390 px of
+     height can't fit HUD + hint row + keyboard + stage). Tablets (h > 520)
+     and desktops can still play landscape. */
+  #rotate-hint{ display:none; position:fixed; inset:0; z-index:60;
+    align-items:center; justify-content:center;
+    background:radial-gradient(ellipse at 50% 40%, #1a1428 0%, #0c0a14 70%); }
+  #rotate-hint .rh-box{ text-align:center; padding:24px; }
+  #rotate-hint .rh-ic{ font-size:64px; display:inline-block;
+    animation: rhspin 2.4s ease-in-out infinite; }
+  @keyframes rhspin{ 0%, 25%{ transform:rotate(0deg); } 60%, 100%{ transform:rotate(90deg); } }
+  #rotate-hint .rh-title{ font-size:22px; margin-top:16px; letter-spacing:.05em; color:#e8c464; }
+  #rotate-hint .rh-sub{ font-size:14px; color:#8a7f64; margin-top:10px; line-height:1.55; }
+  @media (orientation: landscape) and (max-height: 520px) {
+    #rotate-hint{ display:flex; }
+    #ui{ display:none; }
+  }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/easy-speech/dist/EasySpeech.iife.js"></script>
@@ -1065,7 +1099,12 @@ const Scene = {
   frameStage(){
     const w = window.innerWidth, h = window.innerHeight, aspect = w / h;
     const R = THREE.MathUtils.degToRad;
-    if (aspect >= 0.8) {
+    // landscape PHONES (844x390: aspect 2.2, h 390) still need the narrow
+    // framing — the classic camera hides the stage behind the keyboard band.
+    // Desktops (h >= 800) keep the pixel-identical classic camera;
+    // iPad-landscape (h 768) takes the narrow framing instead.
+    const wide = aspect >= 0.8 && h >= 800;
+    if (wide) {
       this.spacingMul = 1;
       this.lookY = 1.6;
       this.camera.fov = 50;
@@ -1074,8 +1113,11 @@ const Scene = {
       if (this.scene.fog) { this.scene.fog.near = 12; this.scene.fog.far = 46; }  // classic depth cue
     } else {
       this.spacingMul = aspect < 0.7 ? 0.6 : 0.8;
+      // width of the ACTUAL row(s) (a 2-row arc is much narrower than its n)
       const n = this.pedestals.length || 5;
-      const rowHalf = ((n - 1) / 2) * Math.min(2.1, 12 / Math.max(n, 1)) * this.spacingMul + 1.2;
+      const rowHalf = (this.pedestals.length
+        ? Math.max.apply(null, this.pedestals.map(p => Math.abs(p.x)))
+        : (n - 1) / 2 * Math.min(2.1, 12 / n) * this.spacingMul) + 1.2;
       const fov = 68;
       let D = (rowHalf + 0.6) / (Math.tan(R(fov) / 2) * aspect);
       D = Math.max(11, Math.min(22, D));
@@ -1092,7 +1134,11 @@ const Scene = {
     }
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
-    if (this.famGrp) this.famGrp.position.x = aspect >= 0.8 ? -5.4 : -2.7;  // keep the familiar on stage
+    if (this.famGrp) {
+      this.famGrp.position.x = wide ? -5.4 : -2.7;  // keep the familiar on stage
+      const fs = wide ? 1 : 1.22;  // closer, more present on phones
+      this.famGrp.scale.set(fs, fs, fs);
+    }
   },
   makeParticles(){
     const max = 600;
@@ -1142,22 +1188,38 @@ const Scene = {
   letterMeshes: [],
   layoutSlots(n){
     this.clearLetters();
-    const spacing = Math.min(2.1, 12 / Math.max(n, 1)) * (this.spacingMul || 1);
-    for (let i = 0; i < n; i++) {
-      const t = (i - (n - 1) / 2) / Math.max(1, (n - 1) / 2);
-      const x = (i - (n - 1) / 2) * spacing;
-      const z = -t * t * 1.3;
-      const ped = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.52, 0.68, 0.5, 24),
-        new THREE.MeshLambertMaterial({ color: 0x2c2440 }));
-      ped.position.set(x, 0.95, z);
-      const top = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.5, 0.5, 0.06, 24),
-        new THREE.MeshLambertMaterial({ color: 0x4a3d70, emissive: 0x1a1230 }));
-      top.position.set(x, 1.23, z);
-      this.slotGroup.add(ped, top);
-      this.pedTops.push(top);
-      this.pedestals.push(new THREE.Vector3(x, 1.9, z)); // rest height: slab bottom sits on podium top
+    // P2: long words on narrow screens get a 2-row arc (front + back) — a
+    // single 9-letter row is the width that forces the camera farthest back
+    // portrait only — landscape has the horizontal room for a single row
+    const twoRow = (this.spacingMul || 1) < 1 && n >= 8 && window.innerWidth < window.innerHeight;
+    const rows = twoRow ? [Math.floor(n / 2), n - Math.floor(n / 2)] : [n];
+    const rowLen = Math.max(...rows);
+    const spacing = Math.min(2.1, 12 / Math.max(rowLen, 1)) * (this.spacingMul || 1);
+    // player feedback: tiles overlapped on longer words — shrink them to fit
+    // the spacing (letters scale with the slab texture, so they stay readable)
+    const tile = Math.min(1, spacing / 1.5);
+    this.tileScale = tile;
+    let i = 0;
+    for (let r = 0; r < rows.length; r++) {
+      const m = rows[r];
+      const zRow = r === 0 ? 0.9 : -1.0;   // front row toward camera, back behind
+      for (let j = 0; j < m; j++) {
+        const t = m > 1 ? (j - (m - 1) / 2) / ((m - 1) / 2) : 0;
+        const x = (j - (m - 1) / 2) * spacing;
+        const z = zRow - t * t * 0.5;
+        const ped = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.52 * tile, 0.68 * tile, 0.5, 24),
+          new THREE.MeshLambertMaterial({ color: 0x2c2440 }));
+        ped.position.set(x, 0.95, z);
+        const top = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.5 * tile, 0.5 * tile, 0.06, 24),
+          new THREE.MeshLambertMaterial({ color: 0x4a3d70, emissive: 0x1a1230 }));
+        top.position.set(x, 1.23, z);
+        this.slotGroup.add(ped, top);
+        this.pedTops.push(top);
+        this.pedestals.push(new THREE.Vector3(x, 1.9, z)); // rest height: slab bottom sits on podium top
+        i++;
+      }
     }
     this.letterMeshes = [];
     this.vowelSet = new Set();
@@ -1199,7 +1261,8 @@ const Scene = {
     const tex = this.letterTexture(ch);
     const side = new THREE.MeshLambertMaterial({ color: this.slabColor || 0x2c2440 });
     const face = new THREE.MeshLambertMaterial({ map: tex, emissive: 0x14102a });
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.25, 1.25, 0.34),
+    const ts = this.tileScale || 1;  // tight rows get smaller tiles (never overlap)
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.25 * ts, 1.25 * ts, 0.34 * ts),
       [side, side, side, side, face, face]);
     const from = opts && opts.reveal
       ? new THREE.Vector3(p.x, p.y + 2.6, p.z)
@@ -2243,6 +2306,7 @@ function showScreen(name){
   // reframe the stage now the DOM band (HUD + hint bar + keyboard) exists —
   // entering play changes the band without any window-resize event
   if (name === 'play' || name === 'summary') requestAnimationFrame(() => Scene.frameStage());
+  updateKbdPill();   // pill only makes sense on the play screen
   if (name !== 'play') {
     $('#hintbar').classList.remove('on');
     $('#kbd').classList.remove('on');
@@ -2260,6 +2324,18 @@ function applyKbd(){
   const m = (SAVE && SAVE.settings && SAVE.settings.kbdMode) || 'auto';
   const show = m === 'always' || (m === 'auto' && window.innerWidth < 1100);
   document.querySelector('#kbd').classList.toggle('hidden', !show);
+  updateKbdPill();
+  // hiding/showing the keyboard changes the stage band — reframe if playing
+  if (document.querySelector('#scr-play.on') || document.querySelector('#scr-summary.on'))
+    requestAnimationFrame(() => Scene.frameStage());
+}
+// P2 focus mode: a friendly pill brings the keyboard back when it's hidden
+// on a narrow screen (the 🎹 HUD toggle and Settings both hide it)
+function updateKbdPill(){
+  const playing = !!document.querySelector('#scr-play.on');
+  const hidden = document.querySelector('#kbd').classList.contains('hidden');
+  const pill = document.querySelector('#kbd-pill');
+  if (pill) pill.classList.toggle('on', playing && hidden && window.innerWidth < 1100);
 }
 function showSub(name){
   prevScreen = document.querySelector('.screen.on') ? document.querySelector('.screen.on').id.replace('scr-', '') : 'menu';
@@ -2566,6 +2642,10 @@ async function boot(){
   $('#btn-kbd').addEventListener('click', () => {
     const hidden = document.querySelector('#kbd').classList.contains('hidden');
     SAVE.settings.kbdMode = hidden ? 'always' : 'never';
+    applyKbd(); saveSave();
+  });
+  $('#kbd-pill').addEventListener('click', () => {
+    SAVE.settings.kbdMode = 'always';   // focus mode off: bring the keys back
     applyKbd(); saveSave();
   });
   $('#btn-face').addEventListener('click', openFace);   // in-game (HUD)
