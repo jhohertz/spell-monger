@@ -117,6 +117,48 @@
   #defbox .dtext{ font-size:17px; line-height:1.45; }
   #defbox .ddots{ margin-top:10px; text-align:center; color:var(--gold); letter-spacing:4px; font-size:13px; }
 
+  /* ESC / Leave confirm overlay (v2t) */
+  #confirm-ov{ position:fixed; inset:0; z-index:60; background:rgba(8,6,18,.62);
+               display:flex; align-items:center; justify-content:center;
+               opacity:0; pointer-events:none; transition:opacity .18s; }
+  #confirm-ov.on{ opacity:1; pointer-events:auto; }
+  #confirm-ov .panel{ max-width:min(92vw,400px); text-align:center; }
+
+  /* Word Hunt (v2t) */
+  #hunt-timer{ width:100%; height:10px; border-radius:5px; background:rgba(255,255,255,.08);
+               border:1px solid var(--panel-line); overflow:hidden; margin:10px 0 6px; }
+  #hunt-timer > div{ height:100%; width:100%; background:linear-gradient(90deg,var(--violet),var(--gold));
+                     transition:width 1s linear; }
+  #hunt-inrow{ display:flex; gap:8px; margin-top:12px; }
+  #hunt-in{ flex:1; min-width:0; background:rgba(0,0,0,.35); color:var(--ink); border:1px solid var(--panel-line);
+            border-radius:10px; padding:12px 14px; font-family:inherit; letter-spacing:2px;
+            text-transform:uppercase; outline:none; min-height:46px; transition:border-color .2s; }
+  #hunt-in:focus{ border-color:var(--gold); }
+  #hunt-msg{ min-height:22px; margin-top:8px; color:var(--gold); font-style:italic; font-size:15px; text-align:center; }
+  #hunt-chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; max-height:min(24vh,150px); overflow-y:auto;
+               padding:2px; }
+  .hchip{ background:rgba(147,111,244,.14); border:1px solid var(--violet); color:var(--ink);
+          border-radius:999px; padding:5px 12px; font-size:14px; letter-spacing:1px; }
+  .hchip.super{ border-color:var(--gold); background:rgba(232,196,100,.15); }
+  #hunt-card{ position:fixed; left:50%; top:46%; transform:translate(-50%,-50%) scale(.92);
+              background:var(--panel); border:1px solid var(--panel-line); border-radius:14px;
+              padding:18px 22px; max-width:min(92vw,460px); z-index:20; opacity:0; pointer-events:none;
+              box-shadow:0 10px 44px rgba(0,0,0,.65); transition:opacity .22s ease, transform .22s ease; }
+  #hunt-card.on{ opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1); }
+  #hunt-card .hc-emoji{ font-size:44px; text-align:center; }
+  #hunt-card .hc-word{ font-size:24px; font-weight:700; letter-spacing:3px; text-align:center; margin:4px 0 10px; }
+  #hunt-card .hc-def{ font-size:15px; line-height:1.4; margin:5px 0; opacity:0; }
+  #hunt-card.on .hc-def{ animation:hc-pop .45s cubic-bezier(.2,1.4,.4,1) forwards; }
+  @keyframes hc-pop{ from{ opacity:0; transform:translateY(14px) scale(.8); }
+                     to{ opacity:1; transform:translateY(0) scale(1); } }
+  #hunt-card .hc-more{ font-size:13px; color:#8a7f64; margin-top:8px; font-style:italic; }
+  #hunt-card .hc-syn{ font-size:14px; color:var(--violet); margin-top:8px; }
+  #hunt-card .hc-super{ color:var(--gold); font-weight:700; text-align:center; letter-spacing:2px;
+                        margin-bottom:6px; animation:hc-pulse 1s ease infinite alternate; }
+  @keyframes hc-pulse{ from{ transform:scale(1); } to{ transform:scale(1.07); } }
+  #hunt-done{ display:none; margin-top:14px; text-align:center; }
+  #hunt-done.on{ display:block; }
+
   /* progress bar */
   .pbar{ width:100%; height:14px; border-radius:7px; background:rgba(255,255,255,.08);
          overflow:hidden; border:1px solid var(--panel-line); }
@@ -221,6 +263,18 @@
 
 <!-- phone-landscape portrait lock (CSS-only: shows only on phone-sized
      landscape screens, auto-hides on rotate — tablets/desktops unaffected) -->
+<!-- leave confirm (ESC / back in mid-round, v2t) -->
+<div id="confirm-ov">
+  <div class="panel" style="text-align:center">
+    <h2 id="confirm-title">Leave?</h2>
+    <div class="sub" id="confirm-text"></div>
+    <div class="row" style="justify-content:center;gap:12px;margin-top:16px">
+      <button class="btn big" id="confirm-stay">Stay</button>
+      <button class="btn warn" id="confirm-go">Leave</button>
+    </div>
+  </div>
+</div>
+
 <div id="rotate-hint">
   <div class="rh-box">
     <div class="rh-ic">📱</div>
@@ -304,6 +358,8 @@
           <button class="btn" id="btn-cab">🗄 Cabinet Round</button>
           <button class="btn" id="btn-scroll">🖋 From the Scroll</button>
           <button class="btn" id="btn-bee">🐝 Spelling Bee</button>
+          <button class="btn" id="btn-known" title="Words you already know — revisit them">🤝 Old Friends</button>
+          <button class="btn" id="btn-hunt" title="Type words you know and prove them">🔎 Word Hunt</button>
         </div>
         <button class="btn" id="btn-daily" style="border-color:#e8c464;color:#f5d78a">📜 Today\u2019s Word</button>
         <div class="row">
@@ -362,6 +418,33 @@
         <button class="btn" id="btn-menu1">Menu</button>
       </div>
     </div>
+  </section>
+
+  <!-- word hunt: prove the words you already know (v2t) -->
+  <section class="screen" id="scr-hunt">
+    <button class="btn back" data-back>← Back</button>
+    <div class="panel" style="max-width:min(94vw,720px);padding-bottom:18px">
+      <h2 style="text-align:center">🔎 Word Hunt</h2>
+      <div class="sub" style="text-align:center">Type words you already know — the tome will prove them.</div>
+      <div id="hunt-timer"><div></div></div>
+      <div class="sub" id="hunt-score" style="text-align:center">⏳ <span id="hunt-time">3:00</span> · <b id="hunt-n">0</b> found · <span id="hunt-gl">✦0</span></div>
+      <div id="hunt-inrow">
+        <input id="hunt-in" type="text" autocomplete="off" autocapitalize="none" spellcheck="false"
+               maxlength="30" placeholder="type a word you know…">
+        <button class="hbtn" id="hunt-go" style="min-height:46px">✨ Find it!</button>
+      </div>
+      <div id="hunt-msg"></div>
+      <div id="hunt-chips"></div>
+      <div id="hunt-done">
+        <div style="font-size:19px;font-weight:700" id="hunt-done-t"></div>
+        <div class="sub" id="hunt-done-s" style="margin-top:6px"></div>
+        <div class="row" style="margin-top:14px;justify-content:center">
+          <button class="btn big" id="btn-hunt-again">🔎 Hunt again</button>
+          <button class="btn" id="btn-hunt-menu">Menu</button>
+        </div>
+      </div>
+    </div>
+    <div id="hunt-card"></div>
   </section>
 
   <!-- settings -->
@@ -515,6 +598,8 @@
     #cab-label{ top:calc(64px + env(safe-area-inset-top, 0px)); }
     #emo-badge{ top:calc(104px + env(safe-area-inset-top, 0px)); font-size:52px; }
     #defbox{ top:22%; padding:13px 16px; }   /* below the badge, more compact */
+    #hunt-card{ top:36%; }                   /* above the native keyboard when it's up */
+    #hunt-chips{ max-height:18dvh; }
     .foot{ font-size:11px; }
   }
   /* touch-class screens (phones AND tablets): 44px swatch targets */
@@ -950,6 +1035,8 @@ const ACH_BASE = [
   { id:'pure',     ic:'👁', name:'Never Look Away',desc:'Finish a round using zero reveals.' },
   { id:'bee1',   ic:'🐝', name:'First Hive',    desc:'Complete a Spelling Bee — all three words flawless.' },
   { id:'bee10',  ic:'🍯', name:'Beekeeper',     desc:'Complete 10 Spelling Bees.' },
+  { id:'hunt5',  ic:'🔎', name:'Word Hunter',   desc:'Find 5 words in a single Word Hunt.' },
+  { id:'hunt15', ic:'🦉', name:'Raven Scholar', desc:'Find 15 words in a single Word Hunt.' },
   // v2: days & streaks
   { id:'day3',   ic:'🌅', name:'Dawn Keeper',   desc:'Play 3 days in a row.' },
   { id:'day7',   ic:'🌞', name:'Weekbound',     desc:'Play 7 days in a row.' },
@@ -997,6 +1084,7 @@ function achCheck(extra){
   const ok = {
     first:   s.totalWords >= 1,
     bee1:    (s.bees || 0) >= 1, bee10: (s.bees || 0) >= 10,
+    hunt5:   (s.huntBest || 0) >= 5, hunt15: (s.huntBest || 0) >= 15,
     kindle:  s.streak >= 5,
     inferno: s.streak >= 10,
     smith:   s.totalWords >= 100,
@@ -1812,8 +1900,14 @@ const Game = {
     this.cab = opts.cab != null ? opts.cab : null;
     this.reverse = !!opts.reverse;
     this.bee = !!opts.bee; this.beeFizzled = false;
-    this.lastMode = this.bee ? 'bee' : this.reverse ? 'scroll' : this.cab != null ? 'cab' : 'round';
+    this.known = !!opts.known;   // Old Friends: only words already known twice
+    this.lastMode = this.bee ? 'bee' : this.reverse ? 'scroll' : this.cab != null ? 'cab' : this.known ? 'known' : 'round';
     this.drawPool = Dict.pool;
+    if (this.known) {
+      const knownPool = Dict.pool.filter(w => (SAVE.counts[w] || 0) > 1);
+      if (knownPool.length < 5) { toast('Old Friends are still sleeping — spell words a couple of times first.'); this.known = false; }
+      else this.drawPool = knownPool;
+    }
     const cabEl = $('#cab-label');
     if (this.cab != null) {
       const cabPool = Dict.pool.filter(w => (Dict.cw[w] || []).includes(this.cab));
@@ -1826,6 +1920,7 @@ const Game = {
     }
     cabEl.classList.toggle('on', this.cab != null);
     if (this.bee) { cabEl.innerHTML = '🐝 The Spelling Bee — three words, unaided, all flawless wins the hive'; cabEl.classList.add('on'); }
+    if (this.known) { cabEl.innerHTML = '🤝 Old Friends — words you already know, revisited'; cabEl.classList.add('on'); }
     if (Dict.pool.length - SAVE.recent.length < 5) SAVE.recent = [];
     const draws = [];
     const nWords = this.bee ? 3 : 5;
@@ -2114,7 +2209,17 @@ const Game = {
     if (m === 'bee') return this.startRound({ bee: true });
     if (m === 'scroll') return this.startRound({ reverse: true });
     if (m === 'cab') return this.startCabinet();
+    if (m === 'known') return this.startRound({ known: true });
     return this.startRound(); // 'round' and finished dailies both continue as plain rounds
+  },
+  abandonRound(){ // ESC "are you sure" — leave mid-round, no penalty, no credit
+    this.killTimers();
+    this.round = null; this.daily = false; this.cab = null; this.reverse = false;
+    this.bee = false; this.known = false; this.setTyping(false);
+    const cl = $('#cab-label'); if (cl) cl.classList.remove('on');
+    $('#hud').classList.remove('on');
+    showScreen('menu'); renderMenu();
+    Sfx.whoosh();
   },
   startDaily(){ // Word of the Day — one deterministic word, special bonus
     this.killTimers();
@@ -2717,13 +2822,161 @@ function themeFlavor(k){
   }[k] || '';
 }
 
+/* ============================= confirm dialog (v2t) ============================= */
+let _confirmFn = null;
+function openConfirm(title, text, fn){
+  $('#confirm-title').textContent = title;
+  $('#confirm-text').textContent = text;
+  _confirmFn = fn; $('#confirm-ov').classList.add('on');
+  Sfx.thud();
+}
+function closeConfirm(){
+  $('#confirm-ov').classList.remove('on'); _confirmFn = null;
+}
+
+/* ============================= word hunt (v2t) ============================= */
+// Free-form challenge: type any word you know, the tome proves it and pays
+// out the "wizard-level knowledge" (meaning / kind / synonyms). The one
+// opt-in mode with a clock — a gentle countdown, nothing penalizes a miss.
+const Hunt = {
+  on: false, t: 0, earned: 0, found: new Set(), timer: null,
+  TIME: 180,   // 3:00 — the "play for 5 minutes" idea, tuned to a snappier default
+  start(){
+    this.on = true; this.t = this.TIME; this.earned = 0; this.found = new Set();
+    $('#hunt-chips').innerHTML = ''; $('#hunt-msg').textContent = '';
+    $('#hunt-in').value = ''; $('#hunt-card').classList.remove('on');
+    $('#hunt-done').classList.remove('on');
+    $('#hunt-in').style.fontSize = '20px';
+    this.hud(); this.drawBar();
+    showScreen('hunt'); Sfx.cast();
+    clearInterval(this.timer);
+    this.timer = setInterval(() => {
+      if (!this.on) return;
+      this.t--;
+      this.drawBar();
+      if (this.t <= 30 && this.t % 5 === 0) Sfx.thud();   // soft ticks in the last half-minute
+      if (this.t <= 0) this.end();
+    }, 1000);
+    this.afterFocus();
+  },
+  afterFocus(){ setTimeout(() => {
+    if (this.on && document.querySelector('#scr-hunt.on')) $('#hunt-in').focus();
+  }, 350); },
+  hud(){
+    $('#hunt-n').textContent = this.found.size;
+    $('#hunt-gl').textContent = '✦' + this.earned;
+  },
+  drawBar(){
+    $('#hunt-time').textContent = Math.floor(this.t / 60) + ':' + String(this.t % 60).padStart(2, '0');
+    $('#hunt-timer > div').style.width = (this.t / this.TIME * 100) + '%';
+  },
+  msg(t){
+    const m = $('#hunt-msg'); m.textContent = t;
+    clearTimeout(this._m); this._m = setTimeout(() => { if (m) m.textContent = ''; }, 2600);
+  },
+  submit(){
+    if (!this.on) return;
+    const raw = $('#hunt-in').value.trim().toLowerCase().replace(/[^a-z]/g, '');
+    if (raw.length < 2) { this.msg('Two letters at least — a word needs a bit more.'); return; }
+    const W = raw.toUpperCase();
+    if (this.found.has(W)) { this.msg('You already found that one!'); Sfx.wobble(); return; }
+    const rec = Dict.get(W);
+    if (!rec) { this.msg('Hmm — that is not a word in the tome.'); Sfx.wobble(); $('#hunt-in').value = ''; return; }
+    this.found.add(W);
+    const superW = rec.m.length >= 3;          // a "super word": several meanings to discover
+    const pay = superW ? 25 : 10;
+    this.earned += pay; SAVE.glitter += pay; saveSave();
+    const chip = document.createElement('span');
+    chip.className = 'hchip' + (superW ? ' super' : '');
+    chip.textContent = (Dict.emo[W] ? Dict.emo[W] + ' ' : '') + W;
+    $('#hunt-chips').appendChild(chip);
+    $('#hunt-in').value = ''; $('#hunt-in').style.fontSize = '20px'; $('#hunt-in').focus();
+    this.hud();
+    this.card(W, rec, superW);
+    if (superW) { Sfx.sparkle(); Sfx.fanfare(); }
+    else Sfx.cast();
+  },
+  card(W, rec, superW){
+    const d = $('#hunt-card');
+    const nDefs = superW ? 5 : 2;
+    const defs = rec.m.slice(0, nDefs);
+    d.innerHTML =
+      (superW ? '<div class="hc-super">★ Super Word!  ✦' + (25) + '</div>' : '') +
+      '<div class="hc-emoji">' + (Dict.emo[W] || '✒️') + '</div>' +
+      '<div class="hc-word">' + W + '</div>' +
+      defs.map((m, i) => '<div class="hc-def" style="animation-delay:' + (i * 180) + 'ms"><b>' +
+        Dict.posName(m[0]) + '.</b> ' + m[1] + '</div>').join('') +
+      (rec.m.length > nDefs ? '<div class="hc-more">… ' + (rec.m.length - nDefs) +
+        ' more meanings — find it in the Word Book</div>' : '') +
+      (rec.s && rec.s.length ? '<div class="hc-syn">like: ' + rec.s.slice(0, 4).join(', ') + '</div>' : '');
+    d.classList.add('on');
+    clearTimeout(this._c);
+    this._c = setTimeout(() => d.classList.remove('on'), superW ? 7500 : 4200);
+  },
+  end(){
+    clearInterval(this.timer); this.on = false;
+    $('#hunt-card').classList.remove('on');
+    const n = this.found.size;
+    if ((SAVE.huntBest || 0) < n) SAVE.huntBest = n;
+    achCheck();
+    saveSave();
+    $('#hunt-done-t').textContent = n === 0
+      ? 'Time! The tome kept its secrets this time.'
+      : 'Time! You found ' + n + (n === 1 ? ' word' : ' words') + '!';
+    $('#hunt-done-s').innerHTML = '✦' + this.earned + ' glitter earned' +
+      (n >= 5 ? ' · 🔎 Word Hunter sigil' : (n >= 15 ? ' · 🦉 Raven Scholar sigil' : ''));
+    $('#hunt-done').classList.add('on');
+    Sfx.fanfare();
+  },
+  abandon(){ // ESC — keep everything already earned (additive, always)
+    clearInterval(this.timer); this.on = false;
+    $('#hunt-card').classList.remove('on');
+    showScreen('menu'); renderMenu();
+    Sfx.whoosh();
+  }
+};
+
 /* ============================= boot & wiring ============================= */
 async function boot(){
   loadSave();
   Game.rng = mulberry32(SAVE.seed || 1);
   buildKeyboard();
   wireSettings();
-  document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => showSub('menu')));
+  document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => {
+    // Word Hunt's Back asks first — everything already earned is kept
+    if (b.closest('#scr-hunt')) { openConfirm('Leave the hunt?', 'You keep the glitter and the words you already found.', () => Hunt.abandon()); return; }
+    showSub('menu');
+  }));
+  // confirm dialog (v2t)
+  $('#confirm-stay').addEventListener('click', closeConfirm);
+  $('#confirm-go').addEventListener('click', () => { const f = _confirmFn; closeConfirm(); if (f) f(); });
+  // Old Friends + Word Hunt (v2t)
+  $('#btn-known').addEventListener('click', () => {
+    Sfx.resume();
+    const n = Dict.pool.filter(w => (SAVE.counts[w] || 0) > 1).length;
+    if (n < 5) {
+      const seen = Dict.pool.filter(w => SAVE.counts[w]).length;
+      toast('Old Friends wake once words are known twice — you have ' + n + ' of 5 (seen ' + seen + '). Keep casting!');
+      return;
+    }
+    Game.startRound({ known: true });
+  });
+  $('#btn-hunt').addEventListener('click', () => { Sfx.resume(); Hunt.start(); });
+  $('#hunt-go').addEventListener('click', () => Hunt.submit());
+  $('#btn-hunt-again').addEventListener('click', () => Hunt.start());
+  $('#btn-hunt-menu').addEventListener('click', () => { showScreen('menu'); renderMenu(); });
+  $('#hunt-in').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); Hunt.submit(); }
+  });
+  $('#hunt-in').addEventListener('input', () => {
+    const el = $('#hunt-in');
+    el.style.fontSize = Math.max(13, Math.min(20, 240 / Math.max(el.value.length, 6))) + 'px';
+  });
+  $('#scr-hunt').addEventListener('click', e => {
+    // keep the text field focused for fast typing (but let buttons work)
+    if (Hunt.on && !e.target.closest('button')) $('#hunt-in').focus();
+  });
+  $('#hunt-card').addEventListener('click', () => $('#hunt-card').classList.remove('on'));
   $('#btn-enter').addEventListener('click', async () => {
     Sfx.init(); Sfx.resume();
     try {
@@ -2812,8 +3065,29 @@ async function boot(){
   $('#btn-skip').addEventListener('click', () => Game.useSkip());
   $('#btn-slip').addEventListener('click', () => Game.giveUp());
   window.addEventListener('keydown', e => {
-    if (document.querySelector('#scr-play.on') === null) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    // v2t: ESC acts as the Back button everywhere it exists. Mid-round it
+    // asks first (leaving = losing this word); the hunt keeps its findings.
+    if (e.key === 'Escape') {
+      if ($('#confirm-ov').classList.contains('on')) { closeConfirm(); return; }
+      if (document.querySelector('#scr-hunt.on')) {
+        if (Hunt.on) openConfirm('Leave the hunt?', 'You keep the glitter and the words you already found.', () => Hunt.abandon());
+        else showScreen('menu'); renderMenu();
+        return;
+      }
+      if (document.querySelector('#scr-play.on')) {
+        if (Game.round && !Game.ending) {
+          openConfirm('Leave the round?', 'Your progress on this word will be lost — the round is not finished yet.', () => Game.abandonRound());
+          return;
+        }
+        showScreen('menu'); renderMenu();   // finishing / summary: plain back
+        return;
+      }
+      const cur = document.querySelector('.screen.on');
+      if (cur && (cur.querySelector('[data-back]') || cur.id === 'scr-summary')) showSub('menu');
+      return;
+    }
+    if (document.querySelector('#scr-play.on') === null) return;
     if (/^[a-z]$/i.test(e.key)) Game.onKey(e.key.toLowerCase());
   });
   // start scene behind the gate for a lively title
