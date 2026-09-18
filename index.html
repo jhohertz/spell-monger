@@ -117,6 +117,29 @@
   #defbox .dtext{ font-size:17px; line-height:1.45; }
   #defbox .ddots{ margin-top:10px; text-align:center; color:var(--gold); letter-spacing:4px; font-size:13px; }
 
+  /* universal help button + Little Book of Help (v2u) */
+  #help-btn{ position:fixed; top:calc(10px + env(safe-area-inset-top, 0px)); right:14px; z-index:30;
+    width:40px; height:40px; border-radius:50%; border:1px solid var(--panel-line);
+    background:var(--panel); color:var(--gold); font-size:19px; font-weight:700; cursor:pointer;
+    opacity:.85; transition:opacity .15s, transform .15s; }
+  #help-btn:hover{ opacity:1; transform:scale(1.06); }
+  body.is-play #help-btn{ top:calc(60px + env(safe-area-inset-top, 0px)); }   /* under the stats HUD */
+  body.is-help #help-btn{ display:none; }
+  .hpanel{ max-width:min(94vw,760px); max-height:calc(100dvh - 90px); overflow-y:auto; }
+  .hsec{ border:1px solid var(--panel-line); border-radius:12px; margin-top:10px; overflow:hidden;
+         background:rgba(0,0,0,.16); }
+  .hhead{ display:flex; align-items:center; gap:10px; width:100%; background:none; border:none;
+          color:inherit; font-family:inherit; font-size:16px; font-weight:700;   /* buttons don't inherit color by default */
+          padding:13px 16px; cursor:pointer; text-align:left; letter-spacing:.02em; }
+  .hhead:hover{ background:rgba(147,111,244,.08); }
+  .hhead em{ margin-left:auto; color:var(--gold); font-style:normal; transition:transform .2s; }
+  .hsec.open .hhead em{ transform:rotate(180deg); }
+  .hbody{ display:none; padding:2px 16px 14px; font-size:15px; line-height:1.55; }
+  .hsec.open .hbody{ display:block; }
+  .hbody p{ margin:8px 0; }
+  .hbody .hrow{ display:flex; gap:10px; margin:8px 0; }
+  .hbody .hrow > b{ flex-shrink:0; white-space:nowrap; }
+
   /* ESC / Leave confirm overlay (v2t) */
   #confirm-ov{ position:fixed; inset:0; z-index:60; background:rgba(8,6,18,.62);
                display:flex; align-items:center; justify-content:center;
@@ -263,6 +286,9 @@
 
 <!-- phone-landscape portrait lock (CSS-only: shows only on phone-sized
      landscape screens, auto-hides on rotate — tablets/desktops unaffected) -->
+<!-- universal help button (v2u) — lives on every screen -->
+<button id="help-btn" title="The Little Book of Help">?</button>
+
 <!-- leave confirm (ESC / back in mid-round, v2t) -->
 <div id="confirm-ov">
   <div class="panel" style="text-align:center">
@@ -447,6 +473,94 @@
     <div id="hunt-card"></div>
   </section>
 
+  <!-- the little book of help (v2u) -->
+  <section class="screen" id="scr-help">
+    <button class="btn back" data-back>← Close</button>
+    <div class="panel hpanel">
+      <h2>📖 The Little Book of Help</h2>
+      <div class="sub" style="text-align:center;margin-bottom:6px">Every secret of the atelier, in one place. Tap a heading to open it.</div>
+      <div id="help-secs">
+        <div class="hsec open">
+          <button class="hhead">🪄 <span>A Round, Step by Step</span><em>▾</em></button>
+          <div class="hbody">
+            <p>I will tell you a word (and often show its emoji), and you spell it letter by letter. A right letter lands on its own little pedestal. A wrong one just wobbles and bounces off — try another letter. <b>There is no timer and there is no failing.</b></p>
+            <p>Finish a word with no wobbles at all and it is <b>flawless</b> — worth extra glitter. A round is five words. When you finish them, you may begin another, take today's word, or visit the menu.</p>
+          </div>
+        </div>
+        <div class="hsec">
+          <button class="hhead">🎧 <span>Asking for Help</span><em>▾</em></button>
+          <div class="hbody">
+            <div class="hrow"><b>🔊 Hear it again</b><span>Always free. Listen as many times as you like.</span></div>
+            <div class="hrow"><b>🔤 Vowels · ✦10</b><span>The vowel letters glow gold on the keyboard.</span></div>
+            <div class="hrow"><b>🎧 Sound it out · ✦25</b><span>I say the whole word, very slowly, letter by letter in your ear.</span></div>
+            <div class="hrow"><b>✨ Reveal</b><span>Uses one Reveal charge (you earn charges over time). A revealed word can never be flawless — but it is never a failure.</span></div>
+            <div class="hrow"><b>⏭ Skip · charge</b><span>Uses one Skip charge to set a word aside. You may meet it again.</span></div>
+            <div class="hrow"><b>🏳 Let it slip</b><span>Stop this word now. No charge, no penalty — just a gentle goodbye.</span></div>
+          </div>
+        </div>
+        <div class="hsec">
+          <button class="hhead">✦ <span>Glitter &amp; Rewards</span><em>▾</em></button>
+          <div class="hbody">
+            <p>You earn ✦ glitter for every word you finish — plus bonuses for flawless words, rare long words, today's word, and Word Hunts. Listening to a whole meaning earns +✦5 (twice per word). Glitter is spent on <b>environments</b>, <b>familiar colors, shapes and faces</b>, and the paid hints. It is never taken away, and nothing requires it to keep playing.</p>
+          </div>
+        </div>
+        <div class="hsec">
+          <button class="hhead">🗺 <span>All the Modes</span><em>▾</em></button>
+          <div class="hbody">
+            <div class="hrow"><b>🪄 Begin a Round</b><span>Five mixed words. The heart of the atelier.</span></div>
+            <div class="hrow"><b>📜 Today's Word</b><span>One word chosen by the day — everyone in the world gets the same one, with a bonus for finishing it.</span></div>
+            <div class="hrow"><b>🗄 Cabinet Round</b><span>Five words from one theme: animals, food, weather…</span></div>
+            <div class="hrow"><b>🖋 From the Scroll</b><span>Trick mode: the word comes backwards — spell it the way it is given.</span></div>
+            <div class="hrow"><b>🐝 Spelling Bee</b><span>Three words. All three flawless wins the hive and a honey reward.</span></div>
+            <div class="hrow"><b>🤝 Old Friends</b><span>Only words you already know (finished twice). Wakes once five words are known twice.</span></div>
+            <div class="hrow"><b>🔎 Word Hunt</b><span>Three minutes, no pedestals: type any word you know and the tome proves it. ✦10 a word — and a <b>super word</b> (three or more meanings) pays ✦25 with a special card. Leaving early keeps everything you found.</span></div>
+          </div>
+        </div>
+        <div class="hsec">
+          <button class="hhead">📖 <span>The Word Book</span><em>▾</em></button>
+          <div class="hbody">
+            <p>Every word you have ever finished becomes an entry — like a bestiary of your own making: emoji, meanings, word kind, synonyms, how many times you have cast it. <b>Tap a word</b> for its full page. Drill down with the <b>A–Z row</b>, or search. Words you have not met yet stay hidden, so the book only ever grows.</p>
+          </div>
+        </div>
+        <div class="hsec">
+          <button class="hhead">🏅 <span>Sigils &amp; Titles</span><em>▾</em></button>
+          <div class="hbody">
+            <p>Sigils are little trophies for milestones: all the words that start with a letter, words of an exact length, every cabinet, streaks, days played, great hunts… No timer ever stands behind them — they simply appear when you get there. Your <b>Title</b> (Initiate, Adept, …) grows with the total words you have cast.</p>
+          </div>
+        </div>
+        <div class="hsec">
+          <button class="hhead">🏔 <span>Environments</span><em>▾</em></button>
+          <div class="hbody">
+            <p>Eight worlds, from the starting Meadow up to the far Beach: a crystal cavern, a frost spire, the library tower, a pumpkin night, the astral plane, and the sky islands. They are unlocked with glitter and are pure wonder — the words do not change, only the sky around them.</p>
+          </div>
+        </div>
+        <div class="hsec">
+          <button class="hhead">🐾 <span>Your Familiar</span><em>▾</em></button>
+          <div class="hbody">
+            <p>A small creature lives beside your pedestals and grows in three stages as you cast more words. You may buy it new colors and shapes, and even a <b>face</b> (✦150): choose its size, its eyes, and its ears in the Familiar's face workshop. It is yours alone.</p>
+          </div>
+        </div>
+        <div class="hsec">
+          <button class="hhead">⌨️ <span>Controls &amp; Keys</span><em>▾</em></button>
+          <div class="hbody">
+            <p>Type with your keyboard or the on-screen one (the <b>🎹</b> button hides or shows it). On a phone, portrait is the happy place — landscape shows a gentle reminder to turn the device.</p>
+            <p><b>ESC is the Back button</b> on every screen. Mid-round it asks <i>“Leave the round?”</i> first — leaving is free, it just ends this word. In a Word Hunt, leaving keeps everything you already found.</p>
+          </div>
+        </div>
+        <div class="hsec">
+          <button class="hhead">💡 <span>Wise Tips</span><em>▾</em></button>
+          <div class="hbody">
+            <div class="hrow"><b>1.</b><span>Listen twice before you type. The second listen always gives something away.</span></div>
+            <div class="hrow"><b>2.</b><span>Stuck? Vowels are the cheap trick — the letters you can see on the keyboard.</span></div>
+            <div class="hrow"><b>3.</b><span>Open the Word Book for words you know but forget. Re-casting Old Friends is bragging rights, not punishment.</span></div>
+            <div class="hrow"><b>4.</b><span>Word Hunt is where you show off everything you already know — even words the rounds have not given you yet.</span></div>
+            <div class="hrow"><b>5.</b><span>There is no wrong answer here, only the next word. Take your time.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- settings -->
   <section class="screen" id="scr-settings">
     <button class="btn back" data-back>← Back</button>
@@ -599,6 +713,7 @@
     #emo-badge{ top:calc(104px + env(safe-area-inset-top, 0px)); font-size:52px; }
     #defbox{ top:22%; padding:13px 16px; }   /* below the badge, more compact */
     #hunt-card{ top:36%; }                   /* above the native keyboard when it's up */
+    #help-btn{ width:44px; height:44px; }
     #hunt-chips{ max-height:18dvh; }
     .foot{ font-size:11px; }
   }
@@ -2464,8 +2579,14 @@ function buildKeyboard(){
 /* ============================= screens & settings ============================= */
 let prevScreen = 'menu';
 function showScreen(name){
+  const prevHelp = !!document.querySelector('#scr-help.on');
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
   $('#scr-' + name).classList.add('on');
+  document.body.classList.toggle('is-play', name === 'play');
+  document.body.classList.toggle('is-help', name === 'help');
+  // reading the manual pauses a Word Hunt — nobody is punished for stopping to read
+  if (name === 'help' && Hunt.on) Hunt.pause();
+  if (prevHelp && name !== 'help' && Hunt.on) Hunt.resume();
   // HUD lifecycle: visible exactly on the play-ish screens (was leaking onto
   // Sigils/Trove etc. and overlapping their ← Back buttons)
   $('#hud').classList.toggle('on', name === 'play' || name === 'summary');
@@ -2850,15 +2971,18 @@ const Hunt = {
     this.hud(); this.drawBar();
     showScreen('hunt'); Sfx.cast();
     clearInterval(this.timer);
-    this.timer = setInterval(() => {
-      if (!this.on) return;
-      this.t--;
-      this.drawBar();
-      if (this.t <= 30 && this.t % 5 === 0) Sfx.thud();   // soft ticks in the last half-minute
-      if (this.t <= 0) this.end();
-    }, 1000);
+    this.timer = setInterval(() => this._tick(), 1000);
     this.afterFocus();
   },
+  _tick(){
+    if (!this.on) return;
+    this.t--;
+    this.drawBar();
+    if (this.t <= 30 && this.t % 5 === 0) Sfx.thud();   // soft ticks in the last half-minute
+    if (this.t <= 0) this.end();
+  },
+  pause(){ if (this.on && this.timer) { clearInterval(this.timer); this.timer = null; } },
+  resume(){ if (this.on && !this.timer) this.timer = setInterval(() => this._tick(), 1000); },
   afterFocus(){ setTimeout(() => {
     if (this.on && document.querySelector('#scr-hunt.on')) $('#hunt-in').focus();
   }, 350); },
@@ -2943,6 +3067,8 @@ async function boot(){
   buildKeyboard();
   wireSettings();
   document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => {
+    // v2u: closing the manual returns to wherever it was opened from
+    if (b.closest('#scr-help')) { showScreen(prevScreen || 'menu'); return; }
     // Word Hunt's Back asks first — everything already earned is kept
     if (b.closest('#scr-hunt')) { openConfirm('Leave the hunt?', 'You keep the glitter and the words you already found.', () => Hunt.abandon()); return; }
     showSub('menu');
@@ -2977,6 +3103,10 @@ async function boot(){
     if (Hunt.on && !e.target.closest('button')) $('#hunt-in').focus();
   });
   $('#hunt-card').addEventListener('click', () => $('#hunt-card').classList.remove('on'));
+  // the Little Book of Help (v2u): universal ? button + accordion sections
+  $('#help-btn').addEventListener('click', () => { Sfx.resume(); Sfx.whoosh(); showSub('help'); });
+  document.querySelectorAll('#help-secs .hhead').forEach(h =>
+    h.addEventListener('click', () => h.parentElement.classList.toggle('open')));
   $('#btn-enter').addEventListener('click', async () => {
     Sfx.init(); Sfx.resume();
     try {
@@ -3002,7 +3132,7 @@ async function boot(){
     Voice.say('Welcome to the atelier. When you are ready, begin a round.');
   });
   $('#btn-start').addEventListener('click', () => { Sfx.resume(); Game.startRound(); });
-  $('#btn-hello').addEventListener('click', () => helloStart('menu'));
+  $('#btn-hello').addEventListener('click', () => showSub('help'));   // v2u: the full manual (wizard stays for first launch)
   $('#btn-hello-next').addEventListener('click', () => {
     if (helloI < HELLO.length - 1) { helloI++; helloRender(); return; }
     helloFinish();
@@ -3084,6 +3214,7 @@ async function boot(){
         return;
       }
       const cur = document.querySelector('.screen.on');
+      if (cur && cur.id === 'scr-help') { showScreen(prevScreen || 'menu'); return; }   // v2u: back to where help was opened
       if (cur && (cur.querySelector('[data-back]') || cur.id === 'scr-summary')) showSub('menu');
       return;
     }
